@@ -1,0 +1,16 @@
+# Everything here runs on Linux (servers, systemd units, shell scripts). A
+# CRLF checkout on Windows would ship scripts with \r and break them
+# ("bash: $'\r': command not found"). Force LF regardless of core.autocrlf.
+*.sh       text eol=lf
+*.py       text eol=lf
+*.md       text eol=lf
+*.service  text eol=lf
+*.json     text eol=lf
+*.cff      text eol=lf
+*.txt      text eol=lf
+*.log      text eol=lf
+*.html     text eol=lf
+*.toml     text eol=lf
+*.example  text eol=lf
+.gitattributes text eol=lf
+.gitignore     text eol=lf

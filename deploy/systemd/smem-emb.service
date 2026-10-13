@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT
+# smem embedder: EmbeddingGemma 2 (Q8_0, ~0.31 GB) on llama-server.
+#
+# Needs llama.cpp b11476 or newer: older builds cannot load the
+# gemma-embedding2 architecture. Model path and binary come from
+# /etc/smem/smem.env (SMEM_EMB_MODEL, LLAMA_SERVER).
+[Unit]
+Description=smem embedder (EmbeddingGemma 2)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=smem
+Group=smem
+# Defaults; /etc/smem/smem.env overrides any of them.
+Environment=LLAMA_SERVER=/usr/local/bin/llama-server
+Environment=LLAMA_HOST=127.0.0.1
+Environment=LLAMA_THREADS=4
+Environment=SMEM_PORT_EMB=8080
+Environment=SMEM_EMB_MODEL=/var/lib/smem/models/embeddinggemma-2-Q8_0.gguf
+EnvironmentFile=-/etc/smem/smem.env
+# --embedding      embeddings endpoint; no --pooling, the GGUF carries Gemma's own (mean).
+# -ub 2048         EMBEDDING MODELS ARE NON-CAUSAL: one whole sequence must fit in
+#                  one micro-batch or llama_decode fails (-2). smem truncates
+#                  texts to 5000 chars (models.EMB_CHARS), which fits 2048 tokens.
+# -c 4096 -np 2    two 2048-token slots, so two embed batches run at once.
+ExecStart=/bin/sh -c 'exec "$LLAMA_SERVER" -m "$SMEM_EMB_MODEL" --embedding -t "$LLAMA_THREADS" -c 4096 -b 2048 -ub 2048 -np 2 --host "$LLAMA_HOST" --port "$SMEM_PORT_EMB"'
+Restart=always
+RestartSec=5
+# llama-server's embedding mode leaks slowly (measured: 0.3 GB -> 3.0 GB over
+# ~1.8 days) and gets slow as it nears a memory cap rather than dying. So it
+# is capped AND restarted daily; Restart=always brings it back in seconds.
+# cgroup v1 hosts (old kernels) need MemoryLimit= instead: there systemd
+# accepts MemoryMax= and silently enforces nothing.
+MemoryMax=3G
+RuntimeMaxSec=1d
+
+[Install]
+WantedBy=multi-user.target

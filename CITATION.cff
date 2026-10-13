@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: CC-BY-4.0
+cff-version: 1.2.0
+message: "If you use this software or its measurements, please cite it as below."
+title: "smem: self-hosted long-term memory for AI agents"
+abstract: >-
+  A local agent-memory service with a Supermemory-shaped API. It extracts
+  atomic facts from documents with a small local LLM, reconciles them over
+  time (duplicate, update or distinct, with full version history), retrieves
+  facts and source chunks through a bi-encoder plus cross-encoder pipeline,
+  and builds a typed memory graph and profile in the background. All model
+  stages run on llama.cpp servers, distributed across one or more machines.
+  Includes measurements: 98.83% context reduction at full recall on a
+  105k-token corpus, and a record of silent failure modes in LLM-based
+  memory pipelines.
+type: software
+version: 0.3.0
+date-released: 2026-10-13
+authors:
+  - given-names: Austin
+    family-names: Gregory
+    website: "https://austingregory.us"
+repository-code: "https://github.com/austingregoryus/smem-agent-memory"
+license:
+  - MIT
+  - CC-BY-4.0
+keywords:
+  - agent memory
+  - retrieval-augmented generation
+  - llama.cpp
+  - local LLM
+  - Model Context Protocol
+  - context compression
+  - temporal knowledge
+  - Intel VCA 2

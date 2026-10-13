@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: MIT
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smem-agent-memory"
+version = "0.3.0"
+description = "Self-hosted long-term memory for AI agents: a Supermemory-shaped API over SQLite and local llama.cpp servers."
+readme = "README.md"
+requires-python = ">=3.9"
+# Code is MIT; the agent instructions shipped in smem/connect/*.md are CC-BY-4.0.
+license = "MIT AND CC-BY-4.0"
+license-files = ["LICENSE", "LICENSES/*"]
+authors = [{ name = "Austin Gregory" }]
+keywords = ["memory", "agents", "mcp", "llama.cpp", "rag", "supermemory"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# numpy only. The MCP bridge (smem/connect/mcp_smem.py) is standard library only.
+dependencies = ["numpy"]
+
+# Entry points are `python -m smem` (CLI) and `python -m smem.server`.
+# Deliberately no console script named `smem`: it would shadow the unrelated
+# `smem` memory-reporting tool packaged by Debian/Ubuntu.
+[project.urls]
+Homepage = "https://github.com/austingregoryus/smem-agent-memory"
+Documentation = "https://github.com/austingregoryus/smem-agent-memory/tree/main/docs"
+
+[project.scripts]
+smem-server = "smem.server:main"
+
+[tool.setuptools]
+# Explicit: eval/, tests/, deploy/ and docs/ sit beside smem/ and are not
+# part of the distribution. smem/ui and smem/connect hold data files (no
+# __init__.py); they are listed so setuptools ships them without warnings.
+# mcp_smem.py is run by path, never imported as smem.connect.
+packages = ["smem", "smem.ui", "smem.connect"]
+
+[tool.setuptools.package-data]
+"smem.ui" = ["*.html"]
+"smem.connect" = ["*.md", "*.py"]

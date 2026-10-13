@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MIT
+# smem HTTP API and web console, on the VCA 2 host (reference deployment).
+#
+# Deliberately NOT ordered after vca2-card.service: the API does not need the
+# nodes to start, and waiting would keep the console down for the several
+# minutes the card takes to boot. Model calls fail over and retry until the
+# nodes are up; the console shows them coming up.
+#
+# smem's defaults are one machine (127.0.0.1); everything VCA-specific is set
+# explicitly here. Card 0 (nodes 172.31.1-3.1) is the interactive lane, card 1
+# (172.31.4-6.1) the background lane. See smem/pool.py.
+[Unit]
+Description=smem memory API and console (:8900)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+WorkingDirectory=/root/supermem
+Environment=PYTHONUNBUFFERED=1
+Environment=SMEM_NODES=172.31.1.1,172.31.2.1,172.31.3.1
+Environment=SMEM_BG_NODES=172.31.4.1,172.31.5.1,172.31.6.1
+# Per-node telemetry over ssh, plus `vcactl status` for the card state.
+Environment=SMEM_NODE_PROBE=ssh
+Environment=SMEM_DB=/root/supermem/smem.db
+# Put NODE_PW=<the nodes' root password> in this file (without it the probe
+# uses ssh key auth), and optionally SMEM_TOKEN=<secret> to require a bearer
+# token. It overrides the Environment= lines above.
+EnvironmentFile=-/root/supermem/smem.env
+ExecStart=/usr/bin/python3 -m smem.server --db ${SMEM_DB} --container vca2-docs --host 0.0.0.0 --port 8900
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

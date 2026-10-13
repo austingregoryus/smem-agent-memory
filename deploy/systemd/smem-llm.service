@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+# smem LLM: gemma-4-E4B-it (Q4_K_M, ~5 GB) on llama-server. Extracts facts at
+# ingest, types and links memories in the background, writes /v1/ask answers.
+#
+# Model path and binary come from /etc/smem/smem.env (SMEM_LLM_MODEL,
+# LLAMA_SERVER).
+[Unit]
+Description=smem LLM (gemma-4-E4B-it)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=smem
+Group=smem
+# Defaults; /etc/smem/smem.env overrides any of them.
+Environment=LLAMA_SERVER=/usr/local/bin/llama-server
+Environment=LLAMA_HOST=127.0.0.1
+Environment=LLAMA_THREADS=4
+Environment=SMEM_PORT_LLM=8082
+Environment=SMEM_LLM_MODEL=/var/lib/smem/models/gemma-4-E4B-it-Q4_K_M.gguf
+EnvironmentFile=-/etc/smem/smem.env
+# -c 3072 -np 1  one 3072-token slot: room for an extraction prompt and its
+#                reply. One slot also keeps smem's fixed system prompts in the
+#                prompt cache (a changing prompt made each decision 5-7x slower).
+#
+# ONE SLOT = ONE REQUEST AT A TIME. On a single machine an ask (or the
+# background worker's next extraction) queues behind the call in flight, which
+# can take ~60 s. If you have the memory, give each request its own slot:
+#     -c 6144 -np 2     (-c is split across slots, so 2 x 3072)
+ExecStart=/bin/sh -c 'exec "$LLAMA_SERVER" -m "$SMEM_LLM_MODEL" -t "$LLAMA_THREADS" -c 3072 -np 1 --host "$LLAMA_HOST" --port "$SMEM_PORT_LLM"'
+Restart=always
+RestartSec=5
+# Measured ~7 GB resident at -c 3072 on the VCA nodes; the cap is headroom,
+# not a tuning knob. cgroup v1 hosts need MemoryLimit= instead.
+MemoryMax=9G
+
+[Install]
+WantedBy=multi-user.target

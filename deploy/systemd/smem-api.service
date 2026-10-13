@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+# smem HTTP API and web console on one ordinary machine.
+#
+#   useradd --system --home /var/lib/smem --shell /usr/sbin/nologin smem
+#   install -m 0644 smem-api.service /etc/systemd/system/
+#   install -d /etc/smem && install -m 0600 ../smem.env.example /etc/smem/smem.env
+#   systemctl daemon-reload && systemctl enable --now smem-api
+#
+# The model servers are smem-emb/smem-rrk/smem-llm.service in this directory.
+# The API does not need them to start: model calls retry until they answer.
+[Unit]
+Description=smem memory API and console (:8900)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=smem
+Group=smem
+# /var/lib/smem, owned by User=, created on start.
+StateDirectory=smem
+Environment=PYTHONUNBUFFERED=1
+Environment=SMEM_DB=/var/lib/smem/smem.db
+# Every SMEM_* setting (nodes, ports, token, ...) goes here; see smem.env.example.
+EnvironmentFile=-/etc/smem/smem.env
+# CHANGE ME: a checkout of the repository (the directory that contains smem/).
+# If smem was pip-installed instead, drop WorkingDirectory and point ExecStart
+# at that environment's python, e.g. /opt/smem/venv/bin/python.
+WorkingDirectory=/opt/smem-agent-memory
+# Listens on localhost only. To serve the LAN, add --host 0.0.0.0 AND set
+# SMEM_TOKEN in /etc/smem/smem.env: without a token anyone who can reach the
+# port can read, change and delete every memory.
+ExecStart=/usr/bin/python3 -m smem.server --host 127.0.0.1 --port 8900
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

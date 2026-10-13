@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT
+# smem reranker: Qwen3-Reranker-0.6B (Q8, ~0.64 GB) on llama-server.
+#
+# Only used when a search asks for rerank=true (and by ask). Model path and
+# binary come from /etc/smem/smem.env (SMEM_RRK_MODEL, LLAMA_SERVER).
+[Unit]
+Description=smem reranker (Qwen3-Reranker-0.6B)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=smem
+Group=smem
+# Defaults; /etc/smem/smem.env overrides any of them.
+Environment=LLAMA_SERVER=/usr/local/bin/llama-server
+Environment=LLAMA_HOST=127.0.0.1
+Environment=LLAMA_THREADS=4
+Environment=SMEM_PORT_RRK=8081
+Environment=SMEM_RRK_MODEL=/var/lib/smem/models/qwen3-reranker-0.6b-q8_0.gguf
+EnvironmentFile=-/etc/smem/smem.env
+# --reranking   the /rerank endpoint.
+# -ub 768       resident memory is dominated by the compute buffer, which scales
+#               with the MICRO-batch, not the model: at -ub 2048 this 0.64 GB
+#               model grew to ~5 GB RSS. smem sends pairs of ~250 tokens
+#               (models.RRK_CHARS), so nothing legitimate needs more than 768.
+# -b 2048       pairs still batch together.
+ExecStart=/bin/sh -c 'exec "$LLAMA_SERVER" -m "$SMEM_RRK_MODEL" --reranking -t "$LLAMA_THREADS" -c 2048 -b 2048 -ub 768 --host "$LLAMA_HOST" --port "$SMEM_PORT_RRK"'
+Restart=always
+RestartSec=5
+# --reranking leaks fast under sustained use (past 7 GB). The cap makes
+# systemd restart THIS process (~10 s) instead of the kernel OOM-killing the
+# largest one, which is the LLM. smem retries across the restart.
+# cgroup v1 hosts need MemoryLimit= instead (MemoryMax= is silently ignored).
+MemoryMax=3G
+
+[Install]
+WantedBy=multi-user.target
